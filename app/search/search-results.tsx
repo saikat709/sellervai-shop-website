@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { PublicProduct } from "@/lib/api";
+import { ringColorStyle } from "@/lib/utils";
 import { ProductCard } from "@/components/storefront";
 
 /**
@@ -23,6 +24,12 @@ export function SearchResults({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState(query);
+
+  // Sync the input with the URL whenever the user navigates to a new query
+  // (e.g. via back/forward, or by clicking a different search result).
+  useEffect(() => {
+    setDraft(query);
+  }, [query]);
 
   const results = useMemo(() => {
     const q = query.toLowerCase();
@@ -55,7 +62,7 @@ export function SearchResults({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Search products by name…"
             className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-10 text-sm shadow-sm focus:border-transparent focus:outline-none focus:ring-2"
-            style={{ ["--tw-ring-color" as string]: `${primary}66` }}
+            style={ringColorStyle(primary)}
             aria-label="Search products"
           />
           {draft ? (

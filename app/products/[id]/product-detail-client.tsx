@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Minus, Plus, ShoppingCart, CheckCircle2 } from "lucide-react";
 import type { PublicProductDetail } from "@/lib/api";
 import { formatPrice, discountedPrice, unitPriceOf } from "@/lib/format";
-import { useCart } from "@/context/cart-context";
+import { buildCartItemFromProduct, useCart } from "@/context/cart-context";
 import { useToast } from "@/context/toast-context";
 
 export function ProductDetailClient({
@@ -32,18 +32,7 @@ export function ProductDetailClient({
 
   function handleAddToCart() {
     if (outOfStock) return;
-    addItem(
-      {
-        productId: product.id,
-        productCode: product.product_code,
-        name: product.name,
-        image_url: product.image_url,
-        price: product.price,
-        discount: product.discount,
-        available_count: product.available_count,
-      },
-      safeQty,
-    );
+    addItem(buildCartItemFromProduct(product), safeQty);
     pushToast(`Added ${safeQty} × ${product.name} to cart`, "success");
   }
 

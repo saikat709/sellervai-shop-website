@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import type { PublicProduct } from "@/lib/api";
 import { unitPriceOf } from "@/lib/format";
+import { ringColorStyle } from "@/lib/utils";
 import { ProductCard } from "@/components/storefront";
 
 type SortKey = "newest" | "price-asc" | "price-desc" | "name-asc";
@@ -15,10 +16,22 @@ const SORT_LABELS: Record<SortKey, string> = {
   "name-asc": "Name: A → Z",
 };
 
-/**
- * Client island for the products grid. The server page hands us the
- * pre-fetched product list; we drive search + filters + sort locally.
- */
+type Filters = {
+  sort: SortKey;
+  onSale: boolean;
+  inStock: boolean;
+  minPrice: string;
+  maxPrice: string;
+};
+
+const DEFAULT_FILTERS: Filters = {
+  sort: "newest",
+  onSale: false,
+  inStock: false,
+  minPrice: "",
+  maxPrice: "",
+};
+
 export function ProductGrid({
   products,
   primary,
@@ -27,46 +40,41 @@ export function ProductGrid({
   primary: string;
 }) {
   const [query, setQuery] = useState("");
-  const [minPrice, setMinPrice] = useState<string>("");
-  const [maxPrice, setMaxPrice] = useState<string>("");
-  const [onSale, setOnSale] = useState(false);
-  const [inStock, setInStock] = useState(false);
-  const [sort, setSort] = useState<SortKey>("newest");
+  const deferredQuery = useDeferredValue(query);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const { sort, onSale, inStock, minPrice, maxPrice } = filters;
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     const min = minPrice === "" ? -Infinity : Number(minPrice);
     const max = maxPrice === "" ? Infinity : Number(maxPrice);
 
-    const matched = products.filter((p) => {
-      if (q && !p.name.toLowerCase().includes(q)) return false;
+    const matched: { p: PublicProduct; unitPrice: number }[] = [];
+    for (const p of products) {
+      if (q && !p.name.toLowerCase().includes(q)) continue;
       const up = unitPriceOf(p);
-      if (Number.isFinite(min) && up < min) return false;
-      if (Number.isFinite(max) && up > max) return false;
-      if (onSale && !p.discount) return false;
-      if (inStock && p.available_count <= 0) return false;
-      return true;
-    });
-
-    const sorted = [...matched];
-    switch (sort) {
-      case "price-asc":
-        sorted.sort((a, b) => unitPriceOf(a) - unitPriceOf(b));
-        break;
-      case "price-desc":
-        sorted.sort((a, b) => unitPriceOf(b) - unitPriceOf(a));
-        break;
-      case "name-asc":
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case "newest":
-      default:
-        // Server already orders by created_at desc; no-op.
-        break;
+      if (Number.isFinite(min) && up < min) continue;
+      if (Number.isFinite(max) && up > max) continue;
+      if (onSale && !p.discount) continue;
+      if (inStock && p.available_count <= 0) continue;
+      matched.push({ p, unitPrice: up });
     }
-    return sorted;
-  }, [products, query, minPrice, maxPrice, onSale, inStock, sort]);
+
+    if (sort === "newest") return matched.map((m) => m.p);
+    matched.sort((a, b) => {
+      switch (sort) {
+        case "price-asc":
+          return a.unitPrice - b.unitPrice;
+        case "price-desc":
+          return b.unitPrice - a.unitPrice;
+        case "name-asc":
+          return a.p.name.localeCompare(b.p.name);
+      }
+    });
+    return matched.map((m) => m.p);
+  }, [products, deferredQuery, filters]);
 
   const activeFilterCount =
     (onSale ? 1 : 0) +
@@ -76,11 +84,7 @@ export function ProductGrid({
 
   function clearAll() {
     setQuery("");
-    setMinPrice("");
-    setMaxPrice("");
-    setOnSale(false);
-    setInStock(false);
-    setSort("newest");
+    setFilters(DEFAULT_FILTERS);
   }
 
   return (
@@ -97,7 +101,7 @@ export function ProductGrid({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products by name…"
             className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-transparent focus:outline-none focus:ring-2"
-            style={{ ["--tw-ring-color" as string]: `${primary}66` }}
+            style={ringColorStyle(primary)}
             aria-label="Search products"
           />
         </label>
@@ -113,17 +117,9 @@ export function ProductGrid({
       {filtersOpen ? (
         <FiltersPopover
           onClose={() => setFiltersOpen(false)}
-          sort={sort}
-          setSort={setSort}
-          onSale={onSale}
-          setOnSale={setOnSale}
-          inStock={inStock}
-          setInStock={setInStock}
-          minPrice={minPrice}
-          maxPrice={maxPrice}
-          setMinPrice={setMinPrice}
-          setMaxPrice={setMaxPrice}
           onClear={clearAll}
+          value={filters}
+          onChange={setFilters}
           primary={primary}
         />
       ) : null}
@@ -199,44 +195,29 @@ function FiltersButton({
 
 function FiltersPopover({
   onClose,
-  sort,
-  setSort,
-  onSale,
-  setOnSale,
-  inStock,
-  setInStock,
-  minPrice,
-  maxPrice,
-  setMinPrice,
-  setMaxPrice,
   onClear,
+  value,
+  onChange,
   primary,
 }: {
   onClose: () => void;
-  sort: SortKey;
-  setSort: (s: SortKey) => void;
-  onSale: boolean;
-  setOnSale: (v: boolean) => void;
-  inStock: boolean;
-  setInStock: (v: boolean) => void;
-  minPrice: string;
-  maxPrice: string;
-  setMinPrice: (v: string) => void;
-  setMaxPrice: (v: string) => void;
   onClear: () => void;
+  value: Filters;
+  onChange: (next: Filters) => void;
   primary: string;
 }) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  // Close on click outside.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose();
+        onCloseRef.current();
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -244,7 +225,11 @@ function FiltersPopover({
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, []);
+
+  const checkboxStyle = { accentColor: primary } as const;
+  const inputClass =
+    "h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2";
 
   return (
     <div
@@ -274,10 +259,10 @@ function FiltersPopover({
             Sort by
           </label>
           <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2"
-            style={{ ["--tw-ring-color" as string]: `${primary}66` }}
+            value={value.sort}
+            onChange={(e) => onChange({ ...value, sort: e.target.value as SortKey })}
+            className={inputClass}
+            style={ringColorStyle(primary)}
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
               <option key={k} value={k}>
@@ -296,10 +281,10 @@ function FiltersPopover({
               type="number"
               inputMode="numeric"
               min="0"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
+              value={value.minPrice}
+              onChange={(e) => onChange({ ...value, minPrice: e.target.value })}
               placeholder="Min"
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2"
+              className={inputClass}
               aria-label="Minimum price"
             />
             <span className="text-zinc-400" aria-hidden>–</span>
@@ -307,30 +292,42 @@ function FiltersPopover({
               type="number"
               inputMode="numeric"
               min="0"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
+              value={value.maxPrice}
+              onChange={(e) => onChange({ ...value, maxPrice: e.target.value })}
               placeholder="Max"
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2"
+              className={inputClass}
               aria-label="Maximum price"
             />
           </div>
         </div>
 
-        <ToggleField
-          label="On sale only"
-          description="Show discounted products"
-          checked={onSale}
-          onChange={setOnSale}
-          primary={primary}
-        />
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition hover:border-zinc-300">
+          <input
+            type="checkbox"
+            checked={value.onSale}
+            onChange={(e) => onChange({ ...value, onSale: e.target.checked })}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+            style={checkboxStyle}
+          />
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-zinc-900">On sale only</span>
+            <span className="mt-0.5 text-xs text-zinc-500">Show discounted products</span>
+          </span>
+        </label>
 
-        <ToggleField
-          label="In stock only"
-          description="Hide sold-out products"
-          checked={inStock}
-          onChange={setInStock}
-          primary={primary}
-        />
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition hover:border-zinc-300">
+          <input
+            type="checkbox"
+            checked={value.inStock}
+            onChange={(e) => onChange({ ...value, inStock: e.target.checked })}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+            style={checkboxStyle}
+          />
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-zinc-900">In stock only</span>
+            <span className="mt-0.5 text-xs text-zinc-500">Hide sold-out products</span>
+          </span>
+        </label>
       </div>
 
       <div className="mt-5 flex items-center justify-end gap-3 border-t border-zinc-100 pt-4">
@@ -351,35 +348,5 @@ function FiltersPopover({
         </button>
       </div>
     </div>
-  );
-}
-
-function ToggleField({
-  label,
-  description,
-  checked,
-  onChange,
-  primary,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  primary: string;
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition hover:border-zinc-300">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-zinc-300"
-        style={{ accentColor: primary }}
-      />
-      <span className="flex flex-col leading-tight">
-        <span className="text-sm font-semibold text-zinc-900">{label}</span>
-        <span className="mt-0.5 text-xs text-zinc-500">{description}</span>
-      </span>
-    </label>
   );
 }

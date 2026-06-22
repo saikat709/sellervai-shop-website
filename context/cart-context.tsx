@@ -195,3 +195,28 @@ export function useCart(): CartContextValue {
   }
   return ctx;
 }
+
+/**
+ * Map a product (listing or detail) to the shape `addItem` expects. Keeps the
+ * cart-input contract in one place so a future `CartItem` field change only
+ * needs to be wired here.
+ */
+export function buildCartItemFromProduct(p: {
+  id: string;
+  product_code: string;
+  name: string;
+  image_url: string | null;
+  price: string;
+  discount: string | null;
+  available_count?: number;
+}): Omit<CartItem, "quantity"> {
+  return {
+    productId: p.id,
+    productCode: p.product_code,
+    name: p.name,
+    image_url: p.image_url,
+    price: p.price,
+    discount: p.discount,
+    available_count: p.available_count,
+  };
+}

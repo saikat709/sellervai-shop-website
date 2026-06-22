@@ -13,7 +13,7 @@ export type PublicProduct = {
 };
 
 export type PublicProductDetail = PublicProduct & {
-  available_count: number;
+  store_id: string;
 };
 
 export type PublicStore = {
@@ -189,6 +189,7 @@ export async function validateCoupon(
       headers: { accept: "application/json" },
       next: { revalidate: 30, tags: [`coupons:${storeId}`] },
     });
+    console.log("validateCoupon response", res);
     if (!res.ok) {
       return { valid: false, discount_amount: 0, message: "Could not validate coupon" };
     }

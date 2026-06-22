@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Eye, ShoppingBag, ShoppingCart } from "lucide-react";
 import type { PublicProduct } from "@/lib/api";
 import { formatPrice, discountedPrice } from "@/lib/format";
-import { useCart } from "@/context/cart-context";
+import { buildCartItemFromProduct, useCart } from "@/context/cart-context";
 import { useToast } from "@/context/toast-context";
 
 /** Product card with hover-lift, discount badge, and View Details + Add to Cart actions. */
@@ -24,23 +24,9 @@ export function ProductCard({
   const outOfStock = product.available_count <= 0;
 
   function handleAddToCart(e: React.MouseEvent) {
-    // The card itself can have nested links/buttons — stop the parent
-    // navigation from firing when the user explicitly clicks "Add to Cart".
     e.preventDefault();
-    e.stopPropagation();
     if (outOfStock) return;
-    addItem(
-      {
-        productId: product.id,
-        productCode: product.product_code,
-        name: product.name,
-        image_url: product.image_url,
-        price: product.price,
-        discount: product.discount,
-        available_count: product.available_count,
-      },
-      1,
-    );
+    addItem(buildCartItemFromProduct(product), 1);
     pushToast(`Added ${product.name} to cart`, "success");
   }
 

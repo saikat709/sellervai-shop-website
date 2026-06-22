@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -67,8 +68,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const value = useMemo(
+    () => ({ toasts, pushToast, dismiss }),
+    [toasts, pushToast, dismiss],
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, pushToast, dismiss }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastViewport toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>

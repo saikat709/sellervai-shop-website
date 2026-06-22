@@ -14,11 +14,6 @@ type SiteHeaderProps = {
   primaryColor: string;
 };
 
-/**
- * Sticky header with a subtle drop shadow that appears once the user scrolls
- * away from the very top of the page. Holds brand, cart icon (with count
- * badge), and the primary CTA — all driven from the cart context.
- */
 export function SiteHeader({
   brandName,
   logoUrl,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 
@@ -18,18 +18,16 @@ export function SearchModal({
   primary: string;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
 
-  // Auto-focus the input when the modal opens; lock body scroll while open.
+  // Body scroll lock while open. Restore to the literal `""` rather than a
+  // captured previous value — the lock could be requested by another modal.
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => {
-      document.body.style.overflow = prevOverflow;
-      clearTimeout(t);
+      document.body.style.overflow = prev;
     };
   }, [open]);
 
@@ -45,18 +43,18 @@ export function SearchModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Reset the field whenever the modal closes so reopening starts fresh.
-  useEffect(() => {
-    if (!open) setQuery("");
-  }, [open]);
-
   if (!open) return null;
+
+  function handleClose() {
+    setQuery("");
+    onClose();
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
-    onClose();
+    handleClose();
     router.push(`/search?q=${encodeURIComponent(q)}`);
   }
 
@@ -70,7 +68,7 @@ export function SearchModal({
       <button
         type="button"
         aria-label="Close search"
-        onClick={onClose}
+        onClick={handleClose}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
       />
       <form
@@ -80,17 +78,17 @@ export function SearchModal({
         <label className="flex items-center gap-3 border-b border-zinc-200 px-4">
           <Search className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
           <input
-            ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products by name…"
+            autoFocus={open}
             className="h-14 w-full bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-400"
             aria-label="Search products"
           />
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
             aria-label="Close"
           >
