@@ -8,6 +8,28 @@ function toFiniteNumber(value: string | number | null | undefined): number | nul
   return Number.isFinite(n) ? n : null;
 }
 
+/** Decimal-as-string price with a guaranteed finite numeric fallback (0). */
+export function parsePrice(value: string | number | null | undefined): number {
+  const n = toFiniteNumber(value);
+  return n ?? 0;
+}
+
+/**
+ * Discounted unit price for any object with `price` + optional `discount`,
+ * clamped at zero so UI never displays a negative number.
+ */
+export function unitPriceOf({
+  price,
+  discount,
+}: {
+  price: string | number;
+  discount?: string | number | null;
+}): number {
+  const base = parsePrice(price);
+  const disc = discount ? parsePrice(discount) : 0;
+  return Math.max(0, base - disc);
+}
+
 /** Format a price string ("4500.00") or number as BDT. */
 export function formatPrice(value: string | number | null | undefined): string {
   const n = toFiniteNumber(value);

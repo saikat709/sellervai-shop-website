@@ -1,26 +1,20 @@
-import { headers } from "next/headers";
-import { getShopData, type PublicProduct } from "@/lib/api";
-import { formatPrice, discountedPrice } from "@/lib/format";
+import { loadStorefrontContext } from "@/lib/shop-page";
 import { SiteHeader } from "@/components/site-header";
-import Link from "next/link";
-
-const FALLBACK_PRIMARY_COLOR = "#6366F1";
+import {
+  ProductCard,
+  ShopNotFound,
+  SiteFooter,
+} from "@/components/storefront";
 
 export default async function HomePage() {
-  const headerList = await headers();
-  const subdomain = headerList.get("x-subdomain");
-  const shop = await getShopData(subdomain);
+  const ctx = await loadStorefrontContext();
+  if (!ctx) return <ShopNotFound />;
 
-  if (!shop) {
-    return <ShopNotFound />;
-  }
-
+  const { shop, displayName, primary } = ctx;
   const { store, config, products } = shop;
-  const displayName = store.brand_name?.trim() || store.name;
-  const primary = config.primary_color || FALLBACK_PRIMARY_COLOR;
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-zinc-900">
+    <div className="flex min-h-screen flex-col">
       <SiteHeader
         brandName={displayName}
         logoUrl={store.logo_url}
@@ -43,7 +37,6 @@ export default async function HomePage() {
               style={{ backgroundColor: primary }}
             />
           )}
-          {/* Dark gradient overlay from bottom for legible text */}
           <div
             className="absolute inset-0"
             style={{
@@ -115,146 +108,6 @@ export default async function HomePage() {
       </main>
 
       <SiteFooter displayName={displayName} description={store.description} />
-    </div>
-  );
-}
-
-function ProductCard({
-  product,
-  primary,
-}: {
-  product: PublicProduct;
-  primary: string;
-}) {
-  const price = formatPrice(product.price);
-  const discount = product.discount ? formatPrice(product.discount) : null;
-  const finalPrice = discountedPrice(product.price, product.discount);
-
-  return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
-      <div className="relative aspect-square w-full overflow-hidden bg-zinc-100">
-        {product.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-zinc-400">
-            No image
-          </div>
-        )}
-        {discount ? (
-          <span className="absolute right-3 top-3 rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow">
-            {discount} off
-          </span>
-        ) : null}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="line-clamp-1 text-base font-semibold text-zinc-900">
-          {product.name}
-        </h3>
-        {product.description ? (
-          <p className="line-clamp-2 text-sm text-zinc-500">
-            {product.description}
-          </p>
-        ) : null}
-
-        <div className="mt-auto flex items-baseline gap-2 pt-3">
-          <span
-            className="text-lg font-bold"
-            style={{ color: finalPrice ? primary : undefined }}
-          >
-            {finalPrice ?? price}
-          </span>
-          {discount ? (
-            <span className="text-sm text-zinc-400 line-through">{price}</span>
-          ) : null}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function SiteFooter({
-  displayName,
-  description,
-}: {
-  displayName: string;
-  description: string | null;
-}) {
-  return (
-    <footer className="mt-12 bg-[#1a1a2e] text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6">
-        <div>
-          <span className="text-lg font-semibold tracking-tight">
-            {displayName}
-          </span>
-          {description ? (
-            <p className="mt-2 max-w-xs text-sm text-white/70">
-              {description}
-            </p>
-          ) : null}
-        </div>
-
-        <nav className="text-sm" aria-label="Footer">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-            Explore
-          </h3>
-          <ul className="mt-3 space-y-2">
-            <li>
-              <a href="#" className="text-white/85 transition hover:text-white">
-                Home
-              </a>
-            </li>
-            <li>
-              <a
-                href="#products"
-                className="text-white/85 transition hover:text-white"
-              >
-                Products
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-white/85 transition hover:text-white">
-                Contact
-              </a>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="text-sm">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-            Powered by
-          </h3>
-
-          <Link href="https://sellervai.com" className="mt-3 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90">
-            SellerVai
-          </Link>
-        </div>
-      </div>
-
-      <div className="border-t border-white/10">
-        <div className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-white/60 sm:px-6">
-          © {new Date().getFullYear()} {displayName}. All rights reserved.
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-function ShopNotFound() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 text-center">
-      <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
-        This shop doesn&apos;t exist or is not published yet.
-      </h1>
-      <p className="mt-3 max-w-md text-sm text-zinc-500">
-        Double-check the URL or come back later.
-      </p>
     </div>
   );
 }
