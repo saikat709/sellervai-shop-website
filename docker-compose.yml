@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-    image: sellervai-web:latest
-    container_name: sellervai-web
+    image: sellervai-shop-web:latest
+    container_name: sellervai-shop-web
     restart: unless-stopped
     ports:
       - "3004:3004"
