@@ -28,7 +28,7 @@ jobs:
             set -euo pipefail
 
             echo "Entering project directory..."
-            cd ~/sellervai-shop-web
+            cd ~/sellervai-shop-website
 
             echo "Updating code..."
             git fetch origin main
