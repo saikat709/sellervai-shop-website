@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "*.localtest.me",
     "*.localhost",
   ],
+  output: "standalone"
 };
 
 export default nextConfig;
