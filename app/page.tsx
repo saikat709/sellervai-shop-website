@@ -47,27 +47,35 @@ export default async function HomePage() {
           />
         </div>
 
-        <div className="pointer-events-none absolute inset-0 flex items-end">
-          <div className="pointer-events-auto mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 sm:pb-16">
-            <div className="max-w-2xl">
-              {config.tagline ? (
-                <h1 className="text-3xl font-bold leading-tight text-white drop-shadow sm:text-5xl">
-                  {config.tagline}
-                </h1>
-              ) : null}
-              {store.description ? (
-                <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">
-                  {store.description}
-                </p>
-              ) : null}
-              <a
-                href="#products"
-                className="mt-6 inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-md transition hover:brightness-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/30"
-                style={{ backgroundColor: primary }}
-              >
-                Shop Now
-              </a>
-            </div>
+        <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+          <div className="w-full max-w-3xl rounded-2xl border border-white/20 bg-black/45 p-6 text-center backdrop-blur-md shadow-2xl sm:p-10">
+            {store.logo_url && (
+              <img
+                src={store.logo_url}
+                alt=""
+                className="mx-auto mb-4 h-16 w-16 rounded-full object-cover border-2 border-white/30 shadow-md"
+              />
+            )}
+            <h2 className="text-xs font-bold uppercase tracking-widest text-white/75 sm:text-sm">
+              {store.brand_name || store.name}
+            </h2>
+            {config.tagline ? (
+              <h1 className="mt-3 text-3xl font-extrabold leading-tight text-white drop-shadow-md sm:text-5xl">
+                {config.tagline}
+              </h1>
+            ) : null}
+            {store.description ? (
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
+                {store.description}
+              </p>
+            ) : null}
+            <a
+              href="#products"
+              className="mt-8 inline-flex h-11 items-center justify-center rounded-full px-8 text-sm font-bold text-white shadow-lg transition duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              style={{ backgroundColor: primary }}
+            >
+              Explore Catalog
+            </a>
           </div>
         </div>
       </section>
